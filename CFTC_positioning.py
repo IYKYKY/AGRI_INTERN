@@ -105,8 +105,9 @@ PARTICIPANTS_FIN = {
 }
 
 PARTICIPANTS_COM = {
-    "Prod/Merc": ("Prod_Merc_Positions_Long_All", "Prod_Merc_Positions_Short_All"),
+    "Commercials (Prod/Merc/Proc)": ("Prod_Merc_Positions_Long_All", "Prod_Merc_Positions_Short_All"),
     "Managed Money": ("M_Money_Positions_Long_All", "M_Money_Positions_Short_All"),
+    "Swap Dealers": ("Swap_Dealer_Positions_Long_All", "Swap_Dealer_Positions_Short_All"),
     "Other Rept": ("Other_Rept_Positions_Long_All", "Other_Rept_Positions_Short_All"),
     "Non-Rept": ("NonRept_Positions_Long_All", "NonRept_Positions_Short_All")
 }
@@ -119,8 +120,9 @@ PARTICIPANTS_FIN_OI = {
 }
 
 PARTICIPANTS_COM_OI = {
-    "Prod/Merc": ("Pct_of_OI_Prod_Merc_Long_All", "Pct_of_OI_Prod_Merc_Short_All"),
+    "Commercials (Prod/Merc/Proc)": ("Pct_of_OI_Prod_Merc_Long_All", "Pct_of_OI_Prod_Merc_Short_All"),
     "Managed Money": ("Pct_of_OI_M_Money_Long_All", "Pct_of_OI_M_Money_Short_All"),
+    "Swap Dealers": ("Pct_of_OI_Swap_Dealer_Long_All", "Pct_of_OI_Swap_Dealer_Short_All"),
     "Other Rept": ("Pct_of_OI_Other_Rept_Long_All", "Pct_of_OI_Other_Rept_Short_All"),
     "Non-Rept": ("Pct_of_OI_NonRept_Long_All", "Pct_of_OI_NonRept_Short_All")
 }
@@ -300,18 +302,18 @@ def plot_oi_4rows(asset, asset_dfs, cot_type="financial", months_back=18):
 # ----------------------------
 # Streamlit App
 # ----------------------------
-st.title("COT Market Participants Positioning")
+st.title("CFTC Market Participants Positioning")
 
 asset_dfs_fin, asset_dfs_com = fetch_cot_data()
-percentiles_fin = compute_latest_percentiles(asset_dfs_fin, cot_type="financial")
 percentiles_com = compute_latest_percentiles(asset_dfs_com, cot_type="commodity")
+percentiles_fin = compute_latest_percentiles(asset_dfs_fin, cot_type="financial")
 
 pages = {
+    "Commodity Futures": MARKETS_COMMODITIES,
     "FX Futures": MARKETS_FX,
     "Rate Futures": MARKETS_RATE,
     "Crypto Futures": MARKETS_CRYPTO,
-    "Equity Index Futures": MARKETS_INDICES,
-    "Commodity Futures": MARKETS_COMMODITIES
+    "Equity Index Futures": MARKETS_INDICES
 }
 
 page = st.sidebar.selectbox("Select Market Page", list(pages.keys()))
