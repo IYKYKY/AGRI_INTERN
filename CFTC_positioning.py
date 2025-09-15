@@ -1,5 +1,5 @@
 
-import CFTC_Positioning as cot
+import CFTC_positioning as cot
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
