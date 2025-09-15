@@ -1,5 +1,4 @@
-
-import cot_reports as cot   # pip install cot_reports
+import CFTC_positioning as cot
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -20,6 +19,10 @@ MARKETS_COMMODITIES = {
     "PLATINUM": ["PLATINUM - NEW YORK MERCANTILE EXCHANGE"],
     "COPPER": ["COPPER- #1 - COMMODITY EXCHANGE INC."],
     "COBALT": ["COBALT - COMMODITY EXCHANGE INC."],
+    "CORN": ["CORN - CHICAGO BOARD OF TRADE"],
+    "CUTTON": ["COTTON - ICE FUTURES U.S."],
+    "SUGAR": ["SUGAR NO. 11 - ICE FUTURES U.S."],
+    "COFFEE C": ["COFFEE C - ICE FUTURES U.S."],
     "COCOA": ["COCOA - ICE FUTURES U.S."],
     "WHEAT-SRW": ["WHEAT-SRW - CHICAGO BOARD OF TRADE"],
     "WHEAT-HRW": ["WHEAT-HRW - CHICAGO BOARD OF TRADE"],
@@ -57,7 +60,7 @@ MARKETS_FX = {
     "MEXICAN PESO": ["MEXICAN PESO - CHICAGO MERCANTILE EXCHANGE"],
     "NEW ZEALAND DOLLAR": ["NZ DOLLAR - CHICAGO MERCANTILE EXCHANGE"],
     'SOUTH AFRICAN RAND': ['SO AFRICAN RAND - CHICAGO MERCANTILE EXCHANGE'],
-    "US DOLLAR INDEX": ["USD INDEX - ICE FUTURES U.S."]
+    "US DOLLAR INDEX": jp3 ["USD INDEX - ICE FUTURES U.S."]
 } 
 
 MARKETS_RATE = {
@@ -127,6 +130,143 @@ PARTICIPANTS_COM_OI = {
     "Non-Rept": ("Pct_of_OI_NonRept_Long_All", "Pct_of_OI_NonRept_Short_All")
 }
 
+# Function to get actual column names from the DataFrame
+def get_available_columns(df, participant_type="financial"):
+    """
+    Dynamically identify available columns in the DataFrame
+    """
+    columns = df.columns.tolist()
+    
+    if participant_type == "financial":
+        # Financial futures participants
+        participants = {}
+        
+        # Look for Dealer columns
+        dealer_long = [col for col in columns if 'Dealer' in col and 'Long' in col and 'All' in col]
+        dealer_short = [col for col in columns if 'Dealer' in col and 'Short' in col and 'All' in col]
+        if dealer_long and dealer_short:
+            participants["Dealers"] = (dealer_long[0], dealer_short[0])
+        
+        # Look for Asset Manager columns
+        am_long = [col for col in columns if 'Asset_Mgr' in col and 'Long' in col and 'All' in col]
+        am_short = [col for col in columns if 'Asset_Mgr' in col and 'Short' in col and 'All' in col]
+        if am_long and am_short:
+            participants["AM/FI"] = (am_long[0], am_short[0])
+        
+        # Look for Leveraged Money columns
+        lev_long = [col for col in columns if 'Lev_Money' in col and 'Long' in col and 'All' in col]
+        lev_short = [col for col in columns if 'Lev_Money' in col and 'Short' in col and 'All' in col]
+        if lev_long and lev_short:
+            participants["Lev Funds"] = (lev_long[0], lev_short[0])
+        
+        # Look for Non-Reportable columns
+        nr_long = [col for col in columns if 'NonRept' in col and 'Long' in col and 'All' in col]
+        nr_short = [col for col in columns if 'NonRept' in col and 'Short' in col and 'All' in col]
+        if nr_long and nr_short:
+            participants["Non-Rept"] = (nr_long[0], nr_short[0])
+            
+    else:  # commodity
+        participants = {}
+        
+        # Look for Producer/Merchant columns
+        pm_long = [col for col in columns if 'Prod_Merc' in col and 'Long' in col and 'All' in col]
+        pm_short = [col for col in columns if 'Prod_Merc' in col and 'Short' in col and 'All' in col]
+        if pm_long and pm_short:
+            participants["Commercials (Prod/Merc/Proc)"] = (pm_long[0], pm_short[0])
+        
+        # Look for Managed Money columns
+        mm_long = [col for col in columns if 'M_Money' in col and 'Long' in col and 'All' in col]
+        mm_short = [col for col in columns if 'M_Money' in col and 'Short' in col and 'All' in col]
+        if mm_long and mm_short:
+            participants["Managed Money"] = (mm_long[0], mm_short[0])
+        
+        # Look for Swap Dealer columns
+        sd_long = [col for col in columns if 'Swap_Dealer' in col and 'Long' in col and 'All' in col]
+        sd_short = [col for col in columns if 'Swap_Dealer' in col and 'Short' in col and 'All' in col]
+        if sd_long and sd_short:
+            participants["Swap Dealers"] = (sd_long[0], sd_short[0])
+        
+        # Look for Other Reportable columns
+        or_long = [col for col in columns if 'Other_Rept' in col and 'Long' in col and 'All' in col]
+        or_short = [col for col in columns if 'Other_Rept' in col and 'Short' in col and 'All' in col]
+        if or_long and or_short:
+            participants["Other Rept"] = (or_long[0], or_short[0])
+        
+        # Look for Non-Reportable columns
+        nr_long = [col for col in columns if 'NonRept' in col and 'Long' in col and 'All' in col]
+        nr_short = [col for col in columns if 'NonRept' in col and 'Short' in col and 'All' in col]
+        if nr_long and nr_short:
+            participants["Non-Rept"] = (nr_long[0], nr_short[0])
+    
+    return participants
+
+def get_oi_columns(df, participant_type="financial"):
+    """
+    Get Open Interest percentage columns
+    """
+    columns = df.columns.tolist()
+    
+    if participant_type == "financial":
+        participants = {}
+        
+        # Look for Dealer OI columns
+        dealer_long = [col for col in columns if 'Pct_of_OI_Dealer' in col and 'Long' in col]
+        dealer_short = [col for col in columns if 'Pct_of_OI_Dealer' in col and 'Short' in col]
+        if dealer_long and dealer_short:
+            participants["Dealers"] = (dealer_long[0], dealer_short[0])
+        
+        # Look for Asset Manager OI columns
+        am_long = [col for col in columns if 'Pct_of_OI_Asset_Mgr' in col and 'Long' in col]
+        am_short = [col for col in columns if 'Pct_of_OI_Asset_Mgr' in col and 'Short' in col]
+        if am_long and am_short:
+            participants["AM/FI"] = (am_long[0], am_short[0])
+        
+        # Look for Leveraged Money OI columns
+        lev_long = [col for col in columns if 'Pct_of_OI_Lev_Money' in col and 'Long' in col]
+        lev_short = [col for col in columns if 'Pct_of_OI_Lev_Money' in col and 'Short' in col]
+        if lev_long and lev_short:
+            participants["Lev Funds"] = (lev_long[0], lev_short[0])
+        
+        # Look for Non-Reportable OI columns
+        nr_long = [col for col in columns if 'Pct_of_OI_NonRept' in col and 'Long' in col]
+        nr_short = [col for col in columns if 'Pct_of_OI_NonRept' in col and 'Short' in col]
+        if nr_long and nr_short:
+            participants["Non-Rept"] = (nr_long[0], nr_short[0])
+            
+    else:  # commodity
+        participants = {}
+        
+        # Look for Producer/Merchant OI columns
+        pm_long = [col for col in columns if 'Pct_of_OI_Prod_Merc' in col and 'Long' in col]
+        pm_short = [col for col in columns if 'Pct_of_OI_Prod_Merc' in col and 'Short' in col]
+        if pm_long and pm_short:
+            participants["Commercials (Prod/Merc/Proc)"] = (pm_long[0], pm_short[0])
+        
+        # Look for Managed Money OI columns
+        mm_long = [col for col in columns if 'Pct_of_OI_M_Money' in col and 'Long' in col]
+        mm_short = [col for col in columns if 'Pct_of_OI_M_Money' in col and 'Short' in col]
+        if mm_long and mm_short:
+            participants["Managed Money"] = (mm_long[0], mm_short[0])
+        
+        # Look for Swap Dealer OI columns
+        sd_long = [col for col in columns if 'Pct_of_OI_Swap_Dealer' in col and 'Long' in col]
+        sd_short = [col for col in columns if 'Pct_of_OI_Swap_Dealer' in col and 'Short' in col]
+        if sd_long and sd_short:
+            participants["Swap Dealers"] = (sd_long[0], sd_short[0])
+        
+        # Look for Other Reportable OI columns
+        or_long = [col for col in columns if 'Pct_of_OI_Other_Rept' in col and 'Long' in col]
+        or_short = [col for col in columns if 'Pct_of_OI_Other_Rept' in col and 'Short' in col]
+        if or_long and or_short:
+            participants["Other Rept"] = (or_long[0], or_short[0])
+        
+        # Look for Non-Reportable OI columns
+        nr_long = [col for col in columns if 'Pct_of_OI_NonRept' in col and 'Long' in col]
+        nr_short = [col for col in columns if 'Pct_of_OI_NonRept' in col and 'Short' in col]
+        if nr_long and nr_short:
+            participants["Non-Rept"] = (nr_long[0], nr_short[0])
+    
+    return participants
 
 # ----------------------------
 # Fetch data
@@ -415,3 +555,207 @@ if selected_asset in df_dict:
 
     else:
         st.info("No open interest data available for this asset.")
+        
+# ----------------------------
+# Streamlit App
+# ----------------------------
+def main():
+    st.set_page_config(page_title="CFTC Market Participants Positioning", layout="wide")
+    st.title("CFTC Market Participants Positioning")
+
+    # Add error handling for data loading
+    try:
+        with st.spinner("Loading COT data..."):
+            asset_dfs_fin, asset_dfs_com = fetch_cot_data()
+        
+        if not asset_dfs_fin and not asset_dfs_com:
+            st.error("No data could be loaded. Please check your internet connection and try again.")
+            return
+            
+        percentiles_com = compute_latest_percentiles(asset_dfs_com, cot_type="commodity")
+        percentiles_fin = compute_latest_percentiles(asset_dfs_fin, cot_type="financial")
+
+        pages = {
+            "Commodity Futures": MARKETS_COMMODITIES,
+            "FX Futures": MARKETS_FX,
+            "Rate Futures": MARKETS_RATE,
+            "Crypto Futures": MARKETS_CRYPTO,
+            "Equity Index Futures": MARKETS_INDICES
+        }
+
+        page = st.sidebar.selectbox("Select Market Page", list(pages.keys()))
+        assets = list(pages[page].keys())
+        selected_asset = st.sidebar.selectbox(f"Select Asset ({page})", assets)
+
+        # Choose which asset_dfs and percentiles_df to use
+        if page == "Commodity Futures":
+            df_dict = asset_dfs_com
+            pct_df = percentiles_com
+            cot_type = "commodity"
+        else:
+            df_dict = asset_dfs_fin
+            pct_df = percentiles_fin
+            cot_type = "financial"
+
+        if selected_asset not in df_dict:
+            st.warning(f"No data available for {selected_asset}")
+            return
+
+        # Get latest available date for this asset
+        latest_date = None
+        df_temp = df_dict[selected_asset].copy()
+        df_temp["Date"] = pd.to_datetime(df_temp["Report_Date_as_YYYY-MM-DD"], errors="coerce")
+        df_temp = df_temp.dropna(subset=["Date"])
+        if not df_temp.empty:
+            latest_date = df_temp["Date"].max().strftime("%Y-%m-%d")
+
+        # ----------------------------
+        # Show Charts
+        # ----------------------------
+        st.subheader(f"{selected_asset} Positioning" + (f" (Latest: {latest_date})" if latest_date else ""))
+        
+        chart = plot_4rows(selected_asset, df_dict, cot_type=cot_type, months_back=18)
+        if chart:
+            st.plotly_chart(chart, use_container_width=True)
+
+        # ----------------------------
+        # Show Open Interest Charts
+        # ----------------------------
+        st.subheader(f"{selected_asset} OI Percentages" + (f" (Latest: {latest_date})" if latest_date else ""))
+        
+        oi_chart = plot_oi_4rows(selected_asset, df_dict, cot_type=cot_type, months_back=18)
+        if oi_chart:
+            st.plotly_chart(oi_chart, use_container_width=True)
+
+        # ----------------------------
+        # Show Percentiles
+        # ----------------------------
+        st.subheader(f"{selected_asset} Positioning Percentiles" + (f" (Latest: {latest_date})" if latest_date else ""))
+        
+        # Get actual participants for this asset
+        sample_df = df_dict[selected_asset]
+        participants_map = get_available_columns(sample_df, cot_type)
+
+        def color_percentiles(val):
+            """Red (0%) → Green (100%)"""
+            if pd.isna(val):
+                return ''
+            red = int(255 * (100 - val) / 100)
+            green = int(255 * val / 100)
+            return f'background-color: rgb({red},{green},0)'
+
+        if not pct_df.empty and selected_asset in pct_df['asset'].values:
+            for p_name, _ in participants_map.items():
+                st.markdown(f"**{p_name}**")
+                # Get all participant columns, exclude 'asset'
+                cols = [col for col in pct_df.columns if col.startswith(p_name)]
+                if cols:
+                    df_show = pct_df[pct_df["asset"] == selected_asset][cols].copy()
+                    
+                    if not df_show.empty:
+                        # Apply color styling
+                        styled_df = df_show.style.applymap(color_percentiles).format("{:.2f}")
+                        
+                        # Render without index
+                        st.markdown(styled_df.hide(axis="index").to_html(), unsafe_allow_html=True)
+                    else:
+                        st.info(f"No percentile data available for {p_name}")
+        else:
+            st.info("No percentile data available for this asset")
+
+        # ----------------------------
+        # Show Raw Data Summary
+        # ----------------------------
+        st.subheader(f"{selected_asset} Current Positions Summary")
+        
+        if not pct_df.empty and selected_asset in pct_df['asset'].values:
+            summary_data = pct_df[pct_df["asset"] == selected_asset][['total_long', 'total_short', 'total_net']].copy()
+            summary_data.columns = ['Total Long', 'Total Short', 'Total Net']
+            st.dataframe(summary_data, use_container_width=True, hide_index=True)
+        else:
+            st.info("No summary data available for this asset")
+
+        # ----------------------------
+        # Show Open Interest Section
+        # ----------------------------
+        st.subheader(f"{selected_asset} Open Interest Breakdown" + (f" (Latest: {latest_date})" if latest_date else ""))
+
+        df_temp = df_dict[selected_asset].copy()
+        df_temp["Date"] = pd.to_datetime(df_temp["Report_Date_as_YYYY-MM-DD"], errors="coerce")
+        df_temp = df_temp.dropna(subset=["Date"]).sort_values("Date")
+
+        if not df_temp.empty:
+            latest_row = df_temp.iloc[-1]
+
+            # Get actual participants and OI columns
+            participants_map = get_available_columns(df_temp, cot_type)
+            oi_map = get_oi_columns(df_temp, cot_type)
+
+            for p_name, (long_col, short_col) in participants_map.items():
+                st.markdown(f"**{p_name}**")
+
+                # Get corresponding OI columns
+                oi_long_col = None
+                oi_short_col = None
+                if p_name in oi_map:
+                    oi_long_col, oi_short_col = oi_map[p_name]
+
+                # Construct dictionary for OI + Pct of OI
+                oi_data = {
+                    "Long OI": int(latest_row.get(long_col, 0)),
+                    "Short OI": int(latest_row.get(short_col, 0)),
+                    "Net OI": int(latest_row.get(long_col, 0) - latest_row.get(short_col, 0)),
+                }
+                
+                # Add percentage data if available
+                if oi_long_col and oi_short_col:
+                    oi_data.update({
+                        "% Long OI": round(latest_row.get(oi_long_col, 0), 2),
+                        "% Short OI": round(latest_row.get(oi_short_col, 0), 2),
+                        "% Net OI": round(latest_row.get(oi_long_col, 0) - latest_row.get(oi_short_col, 0), 2)
+                    })
+
+                st.dataframe(pd.DataFrame([oi_data]), use_container_width=True, hide_index=True)
+
+        else:
+            st.info("No open interest data available for this asset.")
+
+        # ----------------------------
+        # Show Data Info
+        # ----------------------------
+        with st.expander("Data Information"):
+            st.markdown("""
+            **About this data:**
+            - Data source: CFTC Commitment of Traders (COT) reports
+            - Update frequency: Weekly (Tuesdays)
+            - Financial futures use "Traders in Financial Futures" format
+            - Commodity futures use "Disaggregated" format
+            
+            **Participant Categories:**
+            
+            **Financial Futures:**
+            - **Dealers**: Banks and other financial institutions
+            - **AM/FI**: Asset Managers and Fixed Income funds
+            - **Lev Funds**: Leveraged funds (hedge funds, CTAs)
+            - **Non-Rept**: Non-reportable positions (smaller traders)
+            
+            **Commodity Futures:**
+            - **Commercials**: Producers, merchants, processors
+            - **Managed Money**: Hedge funds, CTAs, other money managers
+            - **Swap Dealers**: Banks and swap dealers
+            - **Other Rept**: Other reportable positions
+            - **Non-Rept**: Non-reportable positions (smaller traders)
+            
+            **Percentiles:** Show where current positions rank vs historical data (0% = lowest, 100% = highest)
+            """)
+
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        logger.error(f"Main app error: {str(e)}")
+        
+        # Show debug info in development
+        if st.checkbox("Show debug information"):
+            st.exception(e)
+
+if __name__ == "__main__":
+    main()
